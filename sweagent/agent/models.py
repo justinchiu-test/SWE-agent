@@ -718,7 +718,6 @@ class LiteLLMModel(AbstractModel):
             output = choices[i].message.content or ""
             output_tokens += litellm.utils.token_counter(text=output, model=self.config.name)
             output_dict = {"message": output}
-            import pdb; pdb.set_trace()
             if self.tools.use_function_calling:
                 if response.choices[i].message.tool_calls:  # type: ignore
                     tool_calls = [call.to_dict() for call in response.choices[i].message.tool_calls]  # type: ignore
