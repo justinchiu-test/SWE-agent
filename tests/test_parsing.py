@@ -3,8 +3,10 @@ from __future__ import annotations
 import pytest
 from jinja2 import Template
 
+from sweagent import CONFIG_DIR, TOOLS_DIR
 from sweagent.exceptions import FormatError, FunctionCallingFormatError
 from sweagent.tools.commands import Command
+from sweagent.tools.bundle import Bundle
 from sweagent.tools.parsing import (
     ActionParser,
     EditFormat,
@@ -92,6 +94,27 @@ def test_function_calling_parser():
     thought, action = parser(model_response, [command])
     assert thought == "Let's list the files"
     assert action == "ls"
+
+    # Test with view_range
+    bundle = Bundle(path=TOOLS_DIR / "edit_anthropic")
+    command = bundle.commands[0]
+    tool_call = {
+        "function": {
+            "name": "str_replace_editor",
+            "arguments": '''{
+                "command":"view",
+                "path":"/testbed/sympy/physics/secondquant.py",
+                "view_range":"[1657, 1700]"
+            }''',
+        },
+    }
+    model_response = {
+        "message": "None",
+        "tool_calls": [tool_call],
+    }
+    thought, action = parser(model_response, [command])
+    assert thought == "None"
+    assert action == "str_replace_editor view /testbed/sympy/physics/secondquant.py  --view_range 1657 1700"
 
     # Test with missing tool_calls
     with pytest.raises(FormatError):
