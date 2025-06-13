@@ -1128,7 +1128,8 @@ class DefaultAgent(AbstractAgent):
                     "Exit due to multiple consecutive command timeouts",
                 )
 
-            except ContextWindowExceededError:
+            except ContextWindowExceededError as e:
+                self.logger.exception(f"Exiting due to context window: {e}", exc_info=True)
                 return handle_error_with_autosubmission(
                     "exit_context",
                     "Exit due to context window",
