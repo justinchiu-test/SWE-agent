@@ -5,6 +5,7 @@ import copy
 import json
 import logging
 import time
+import re
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Literal
 
@@ -655,9 +656,13 @@ class DefaultAgent(AbstractAgent):
 
         message = "\n".join(messages)
 
+        # Clean message for logging by removing terminal escape sequences and non-printable characters
+        clean_message = re.sub(r'\x1b\[[0-9;]*[mGKHF]', '', message)  # Remove ANSI escape sequences
+        clean_message = ''.join(c if c.isprintable() or c in '\n\t' else '?' for c in clean_message)
+
         # We disable syntax highlighting here, because some inputs can lead to a complete cross-thread
         # freeze in the agent. See https://github.com/SWE-agent/SWE-agent/issues/901 .
-        self.logger.info(f"🤖 MODEL INPUT\n{message}", extra={"highlighter": None})
+        self.logger.info(f"🤖 MODEL INPUT\n{clean_message}", extra={"highlighter": None})
         history_item: dict[str, Any] = {
             "role": "user",
             "content": message,
