@@ -64,3 +64,5 @@ agent:
   history_processors:
     - type: last_n_observations
       n: 10
+  model:
+    temperature: 1.
