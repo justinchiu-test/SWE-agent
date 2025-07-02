@@ -929,14 +929,9 @@ class CohereModel(AbstractModel):
                 **extra_args,
                 # n=n, # unfortunately, not allowed
             )
-        except litellm.exceptions.ContextWindowExceededError as e:
-            raise ContextWindowExceededError from e
-        except litellm.exceptions.ContentPolicyViolationError as e:
-            raise ContentPolicyViolationError from e
-        except litellm.exceptions.BadRequestError as e:
-            if "is longer than the model's context length" in str(e):
-                raise ContextWindowExceededError from e
-            raise
+        except Exception as e:
+            # not sure what exceptions to raise
+            raise e
         self.logger.info(f"Response: {response}")
 
         # dont use cost for now
