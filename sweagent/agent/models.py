@@ -838,7 +838,7 @@ class CohereModel(AbstractModel):
         self.lm_provider = None
 
         import cohere
-        self.co = cohere.ClientV2()
+        self.co = cohere.ClientV2(base_url=os.getenv("OPENAI_API_BASE"), api_key=os.getenv("OPENAI_API_KEY"))
 
     @property
     def instance_cost_limit(self) -> float:
