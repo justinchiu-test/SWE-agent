@@ -1194,11 +1194,11 @@ class RawCohereModel(CohereModel):
             # not sure what exceptions to raise
             raise e
 
-        self.logger.info(f"Response: {response}")
+        output = response.generations[0].text
+        self.logger.info(f"Response: {output}")
 
         # dont use cost for now
         cost = 0
-        output = response.generations[0].text
 
         outputs = []
         input_tokens = int(response.meta.billed_units.input_tokens)
