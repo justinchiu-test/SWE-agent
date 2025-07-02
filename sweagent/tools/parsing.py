@@ -592,6 +592,15 @@ class FatucParser(AbstractParseFunction, BaseModel):
 
             # Format arguments using their individual argument_format
             values = data_command.get("parameters", {})
+            # See https://github.com/SWE-agent/SWE-agent/issues/1182
+            if "view_range" in values:
+                # Check that value is format as [x, y]
+                v = values["view_range"]
+                if isinstance(v, str):
+                    if not re.match(r"\[\d+,\s*\d+\]", v):
+                        msg = f"view_range must be in the format [<start>, <end>], got {v}."
+                        raise FormatError(msg)
+                    values["view_range"] = json.loads(v)
             formatted_args = {
                 arg.name: Template(arg.argument_format).render(
                     value=quote(values[arg.name])
