@@ -993,6 +993,7 @@ class CohereModel(AbstractModel):
                     ContextWindowExceededError,
                     CostLimitExceededError,
                     RuntimeError,
+                    # TODO: change these errors to cohere errors
                     litellm.exceptions.UnsupportedParamsError,
                     litellm.exceptions.NotFoundError,
                     litellm.exceptions.PermissionDeniedError,
