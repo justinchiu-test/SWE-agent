@@ -546,6 +546,70 @@ class JsonParser(AbstractParseFunction, BaseModel):
             msg = "Model output is not valid JSON."
             raise FormatError(msg)
 
+class FatucParser(AbstractParseFunction, BaseModel):
+    """Expects the model response to be a JSON object."""
+
+    error_message: str = dedent("""\
+    Your output could not be parsed as Fatuc. Please make sure your action output is valid JSON.\
+    """)
+
+    type: Literal["fatuc"] = "fatuc"
+    """Type for (de)serialization. Do not change."""
+
+    def __call__(self, model_response: dict, commands: list[Command], strict=False):
+        """Parses the action from the output of the API call in FATUC format."""
+        pattern = r'(.*)<\|START_ACTION\|>(.*?)<\|END_ACTION\|>'
+        thought, json_actions = re.findall(pattern, model_response["message"], re.DOTALL)[0]
+        try:
+            data = json.loads(json_actions)
+            if not isinstance(data, list):
+                msg = "Model output is not a JSON list."
+                raise FormatError(msg)
+
+            # Check structure of commands 
+            data_command = data[0]
+            if not isinstance(data_command, dict):
+                msg = "Command is not valid dict"
+                raise FormatError(msg)
+
+            # Check if required keys are present in 'command' object
+            command_keys = ["tool_name"]
+            for key in command_keys:
+                if key not in data_command:
+                    msg = f"Key '{key}' is missing from 'command' object."
+                    raise FormatError(msg)
+
+            commands_dict = {c.name: c for c in commands}
+            command = commands_dict.get(data_command["tool_name"])
+
+            # Handle command parsing based on strict mode
+            if command is None:
+                if strict:
+                    msg = f"Command '{data_command['tool_name']}' not found in list of available commands."
+                    raise FormatError(msg)
+                # In non-strict mode, just join command name with argument values
+                return thought, " ".join([data_command["tool_name"], *data_command.get("parameters", {}).values()])
+
+            # Format arguments using their individual argument_format
+            values = data_command.get("parameters", {})
+            formatted_args = {
+                arg.name: Template(arg.argument_format).render(
+                    value=quote(values[arg.name])
+                    if _should_quote(values[arg.name], command)
+                    else values[arg.name]
+                )
+                if arg.name in values
+                else ""
+                for arg in command.arguments
+            }
+
+            # Use the formatted arguments with invoke_format
+            action = command.invoke_format.format(**formatted_args).strip()
+            return thought, action
+        except json.JSONDecodeError:
+            msg = "Model output is not valid JSON."
+            raise FormatError(msg)
+
 
 ParseFunction = (
     ActionParser
@@ -557,4 +621,5 @@ ParseFunction = (
     | EditFormat
     | Identity
     | JsonParser
+    | FatucParser
 )
