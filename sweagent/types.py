@@ -40,11 +40,11 @@ class StepOutput(BaseModel):
 
 
 class TrajectoryStep(TypedDict):
-    action: str
-    observation: str
-    response: str
+    action: str | None
+    observation: str | None
+    response: str | None
     state: dict[str, str]
-    thought: str
+    thought: str | None
     execution_time: float
     query: list[dict[str, Any]]
     extra_info: dict[str, Any]
