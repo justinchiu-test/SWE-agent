@@ -183,6 +183,10 @@ class GenericAPIModelConfig(PydanticBaseModel):
         return f"{self.name}__t-{self.temperature:.2f}__p-{self.top_p:.2f}__c-{self.per_instance_cost_limit:.2f}"
 
 
+class CohereModelConfig(GenericAPIModelConfig):
+    skip_preamble: bool = False
+
+
 class ReplayModelConfig(GenericAPIModelConfig):
     replay_path: Path = Field(description="Path to replay file when using the replay model.")
 
@@ -241,7 +245,8 @@ class HumanThoughtModelConfig(HumanModelConfig):
 
 
 ModelConfig = Annotated[
-    GenericAPIModelConfig
+    CohereModelConfig
+    | GenericAPIModelConfig
     | ReplayModelConfig
     | InstantEmptySubmitModelConfig
     | HumanModelConfig
@@ -817,7 +822,7 @@ class LiteLLMModel(AbstractModel):
 
 
 class CohereModel(AbstractModel):
-    def __init__(self, args: GenericAPIModelConfig, tools: ToolConfig):
+    def __init__(self, args: CohereModelConfig, tools: ToolConfig):
         """Model served by the `co` library."""
         # Always copy config to avoid shared state between different instances
         self.config: GenericAPIModelConfig = args.model_copy(deep=True)
@@ -919,6 +924,9 @@ class CohereModel(AbstractModel):
         completion_kwargs = self.config.completion_kwargs
         if self.model_max_output_tokens or self.lm_provider == "anthropic":
             completion_kwargs["max_tokens"] = self.model_max_output_tokens
+        request_options = None
+        if self.skip_preamble:
+            request_options = cohere.core.RequestOptions(additional_body_parameters=dict(skip_preamble=True))
         try:
             response = self.co.chat(  # type: ignore
                 model=self.config.name[3:],
@@ -927,6 +935,7 @@ class CohereModel(AbstractModel):
                 p=self.config.top_p,
                 **completion_kwargs,
                 **extra_args,
+                request_options=request_options,
                 # n=n, # unfortunately, not allowed
             )
         except Exception as e:
