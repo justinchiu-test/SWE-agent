@@ -925,8 +925,8 @@ class CohereModel(AbstractModel):
         if self.model_max_output_tokens or self.lm_provider == "anthropic":
             completion_kwargs["max_tokens"] = self.model_max_output_tokens
         request_options = None
-        if self.skip_preamble:
-            request_options = cohere.core.RequestOptions(additional_body_parameters=dict(skip_preamble=True))
+        #if self.skip_preamble:
+        #    request_options = cohere.core.RequestOptions(additional_body_parameters=dict(skip_preamble=True))
         try:
             response = self.co.chat(  # type: ignore
                 model=self.config.name[3:],
