@@ -1195,8 +1195,8 @@ class RawCohereModel(CohereModel):
             #extra_args["tools"] = self.tools.tools
             # TODO: FORMAT TOOLS IN PREAMBLE NOT MANUALLY
         completion_kwargs = self.config.completion_kwargs
-        #print(format_raw_prompt(messages))
-        #import pdb; pdb.set_trace()
+        # print(format_raw_prompt(messages))
+        # import pdb; pdb.set_trace()
         try:
             response = self.co.generate(  # type: ignore
                 model=self.config.name[6:],
