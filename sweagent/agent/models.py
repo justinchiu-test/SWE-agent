@@ -1092,7 +1092,6 @@ END_ACTION_TOKEN = "<|END_ACTION|>"
 START_TOOL_RESULT_TOKEN = "<|START_TOOL_RESULT|>"
 END_TOOL_RESULT_TOKEN = "<|END_TOOL_RESULT|>"
 
-
 PREAMBLE = """# System Preamble
 You are in contextual safety mode. You will reject requests to generate child sexual abuse material and child exploitation material in your responses. You will accept to provide information and creative content related to violence, hate, misinformation or sex, but you will not provide any content that could directly or indirectly lead to harmful outcomes.
 
@@ -1103,15 +1102,23 @@ You have been trained on data in English, French, Spanish, Italian, German, Port
 You have been trained to have advanced reasoning and tool-use capabilities and you should make best use of these skills to serve user's requests.
 
 ## Tool Use
-Carry out the task by repeatedly executing the following steps.
+Think about how you can make best use of the provided tools to help with the task and come up with a high level plan that you will execute first.
+
+0. Start by writing <|START_THINKING|> followed by a detailed step by step plan of how you will solve the problem. For each step explain your thinking fully and give details of required tool calls (if needed). Unless specified otherwise, you write your plan in natural language. When you finish, close it out with <|END_THINKING|>.
+    You can optionally choose to skip this step but only when the user request is so straightforward to address that only a trivial plan would be needed. In all other circumstances you must complete the step, even if the plan contains no tool calls but just step by step reasoning.
+
+Then carry out your plan by repeatedly executing the following steps.
 1. Action: write <|START_ACTION|> followed by a list of JSON-formatted tool calls, with each one containing "tool_name" and "parameters" fields.
     When there are multiple tool calls which are completely independent of each other (i.e. they can be executed in parallel), you should list them out all together in one step. When you finish, close it out with <|END_ACTION|>.
 2. Observation: you will then receive results of those tool calls in JSON format in the very next turn, wrapped around by <|START_TOOL_RESULT|> and <|END_TOOL_RESULT|>. Carefully observe those results and think about what to do next. Note that these results will be provided to you in a separate turn. NEVER hallucinate results.
     Every tool call produces a list of results (when a tool call produces no result or a single result, it'll still get wrapped inside a list). Each result is clearly linked to its originating tool call via its "tool_call_id".
+3. Reflection: start the next turn by writing <|START_THINKING|> followed by what you've figured out so far, any changes you need to make to your plan, and what you will do next. When you finish, close it out with <|END_THINKING|>.
+    You can optionally choose to skip this step when everything is going according to plan and no special pieces of information or reasoning chains need to be recorded.
+    NOTE: You MUST NOT skip this step when you are done with tool-use actions and are ready to respond to the user.
 
-You can repeat the above 2 steps multiple times (could be 0 times too if no suitable tool calls are available or needed), until you decide it's time to finally respond to the user.
+You can repeat the above 3 steps multiple times (could be 0 times too if no suitable tool calls are available or needed), until you decide it's time to finally respond to the user.
 
-3. Response: then break out of the loop and write <|START_RESPONSE|> followed by a piece of text which serves as a response to the user's last request. Use all previous tool calls and results to help you when formulating your response. When you finish, close it out with <|END_RESPONSE|>.
+4. Response: then break out of the loop and write <|START_RESPONSE|> followed by a piece of text which serves as a response to the user's last request. Use all previous tool calls and results to help you when formulating your response. When you finish, close it out with <|END_RESPONSE|>.
 
 ## Available Tools
 Here is the list of tools that you have available to you.
@@ -1120,9 +1127,9 @@ Each tool is represented as a JSON object with fields like "name", "description"
 
 ```json
 [
-    {"name": "submit", "description": "submits the current file", "parameters": {"type": "object", "properties": {}, "required": []}, "responses": null},
-    {"name": "bash", "description": "runs the given command directly in bash", "parameters": {"type": "object", "properties": {"command": {"type": "string", "description": "The bash command to execute."}}, "required": ["command"]}, "responses": null},
-    {"name": "str_replace_editor", "description": "Custom editing tool for viewing, creating and editing files. State is persistent across command calls and discussions with the user. If `path` is a file, `view` displays the result of applying `cat -n`. If `path` is a directory, `view` lists non-hidden files and directories up to 2 levels deep. The `create` command cannot be used if the specified `path` already exists as a file. If a `command` generates a long output, it will be truncated and marked with `<response clipped>`. The `undo_edit` command will revert the last edit made to the file at `path`. Notes for using the `str_replace` command: The `old_str` parameter should match EXACTLY one or more consecutive lines from the original file. Be mindful of whitespaces! If the `old_str` parameter is not unique in the file, the replacement will not be performed. Make sure to include enough context in `old_str` to make it unique. The `new_str` parameter should contain the edited lines that should replace the `old_str`", "parameters": {"type": "object", "properties": {"command": {"type": "string", "enum": ["view", "create", "str_replace", "insert", "undo_edit"], "description": "The commands to run. Allowed options are: `view`, `create`, `str_replace`, `insert`, `undo_edit`."}, "path": {"type": "string", "description": "Absolute path to file or directory, e.g. `/testbed/file.py` or `/testbed`."}, "file_text": {"type": "string", "description": "Required parameter of `create` command, with the content of the file to be created."}, "old_str": {"type": "string", "description": "Required parameter of `str_replace` command containing the string in `path` to replace."}, "new_str": {"type": "string", "description": "Optional parameter of `str_replace` command containing the new string (if not given, no string will be added). Required parameter of `insert` command containing the string to insert."}, "insert_line": {"type": "integer", "description": "Required parameter of `insert` command. The `new_str` will be inserted AFTER the line `insert_line` of `path`."}, "view_range": {"type": "array", "items": {"type": "integer"}, "description": "Optional parameter of `view` command when `path` points to a file. If none is given, the full file is shown. If provided, the file will be shown in the indicated line number range, e.g. [11, 12] will show lines 11 and 12. Indexing at 1 to start. Setting `[start_line, -1]` shows all lines from `start_line` to the end of the file."}}, "required": ["command", "path"]}, "responses": null}
+    {"name": "bash", "description": "Execute a bash command in the terminal.", "parameters": {"type": "object", "properties": {"command": {"type": "string", "description": "The bash command to execute. Can be empty to view additional logs when previous exit code is `-1`. Can be `ctrl+c` to interrupt the currently running process."}}, "required": ["command"]}, "responses": null},
+    {"name": "str_replace_editor", "description": "Custom editing tool for viewing, creating and editing files\n* State is persistent across command calls and discussions with the user\n* If `path` is a file, `view` displays the result of applying `cat -n`. If `path` is a directory, `view` lists non-hidden files and directories up to 2 levels deep\n* The `create` command cannot be used if the specified `path` already exists as a file\n* If a `command` generates a long output, it will be truncated and marked with `<response clipped>`\n* The `undo_edit` command will revert the last edit made to the file at `path`\n\nNotes for using the `str_replace` command:\n* The `old_str` parameter should match EXACTLY one or more consecutive lines from the original file. Be mindful of whitespaces!\n* If the `old_str` parameter is not unique in the file, the replacement will not be performed. Make sure to include enough context in `old_str` to make it unique\n* The `new_str` parameter should contain the edited lines that should replace the `old_str`", "parameters": {"type": "object", "properties": {"command": {"type": "string", "enum": ["view", "create", "str_replace", "insert", "undo_edit"], "description": "The commands to run. Allowed options are: `view`, `create`, `str_replace`, `insert`, `undo_edit`.\nAllowed values: [`view`, `create`, `str_replace`, `insert`, `undo_edit`]"}, "path": {"type": "string", "description": "Absolute path to file or directory, e.g. `/repo/file.py` or `/repo`."}, "file_text": {"type": "string", "description": "Required parameter of `create` command, with the content of the file to be created."}, "old_str": {"type": "string", "description": "Required parameter of `str_replace` command containing the string in `path` to replace."}, "new_str": {"type": "string", "description": "Optional parameter of `str_replace` command containing the new string (if not given, no string will be added). Required parameter of `insert` command containing the string to insert."}, "insert_line": {"type": "integer", "description": "Required parameter of `insert` command. The `new_str` will be inserted AFTER the line `insert_line` of `path`."}, "view_range": {"type": "array", "items": {"type": "integer"}, "description": "Optional parameter of `view` command when `path` points to a file. If none is given, the full file is shown. If provided, the file will be shown in the indicated line number range, e.g. [11, 12] will show lines 11 and 12. Indexing at 1 to start. Setting `[start_line, -1]` shows all lines from `start_line` to the end of the file."}}, "required": ["command", "path"]}, "responses": null},
+    {"name": "submit", "description": "Finish the interaction when the task is complete OR if the assistant cannot proceed further with the task.\nNo parameters are required for this function.", "parameters": {"type": "object", "properties": {}, "required": []}, "responses": null}
 ]
 ```
 
@@ -1188,6 +1195,8 @@ class RawCohereModel(CohereModel):
             #extra_args["tools"] = self.tools.tools
             # TODO: FORMAT TOOLS IN PREAMBLE NOT MANUALLY
         completion_kwargs = self.config.completion_kwargs
+        #print(format_raw_prompt(messages))
+        #import pdb; pdb.set_trace()
         try:
             response = self.co.generate(  # type: ignore
                 model=self.config.name[6:],
