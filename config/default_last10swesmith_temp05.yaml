@@ -61,6 +61,7 @@ agent:
       arguments:
       - name: view_range
         argument_format: "--view_range {{value}}"
+    max_observation_length: 50000
   history_processors:
     - type: last_n_observations
       n: 10

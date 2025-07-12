@@ -890,17 +890,9 @@ class CohereModel(AbstractModel):
             msg = "Per instance call limit exceeded"
             raise InstanceCallLimitExceededError(msg)
 
-    def _sleep(self) -> None:
-        elapsed_time = time.time() - GLOBAL_STATS.last_query_timestamp
-        if elapsed_time < self.config.delay:
-            time.sleep(self.config.delay - elapsed_time)
-        with GLOBAL_STATS_LOCK:
-            GLOBAL_STATS.last_query_timestamp = time.time()
-
     def _single_query(
         self, messages: list[dict[str, str]], n: int | None = None, temperature: float | None = None
     ) -> list[dict]:
-        self._sleep()
         # Workaround for litellm bug https://github.com/SWE-agent/SWE-agent/issues/1109
         messages_no_cache_control = copy.deepcopy(messages)
         for message in messages_no_cache_control:
@@ -1172,7 +1164,6 @@ class RawCohereModel(CohereModel):
     def _single_query(
         self, messages: list[dict[str, str]], n: int | None = None, temperature: float | None = None
     ) -> list[dict]:
-        self._sleep()
         # Workaround for litellm bug https://github.com/SWE-agent/SWE-agent/issues/1109
         messages_no_cache_control = copy.deepcopy(messages)
         for message in messages_no_cache_control:
