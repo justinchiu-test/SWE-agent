@@ -57,9 +57,9 @@ class RetryConfig(PydanticBaseModel):
 
     retries: int = 20
     """Number of retries"""
-    min_wait: float = 10
+    min_wait: float = 1
     """Minimum wait time between retries (random exponential wait)"""
-    max_wait: float = 120
+    max_wait: float = 10
     """Maximum wait time between retries (random exponential wait)"""
 
 
